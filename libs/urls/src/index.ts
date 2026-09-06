@@ -26,6 +26,16 @@ export function developmentUrls(): DevelopmentUrls {
 
 const development: DevelopmentUrls = developmentUrls();
 
+/**
+ * The GitHub account everything here is published under.
+ *
+ * An identity rather than an address, which is why it sits beside the map instead of inside it:
+ * the map is mirrored into Rust as URL constants, and this is the one string in it that is not
+ * a URL. The CDN's release proxy fetches from this account and no other -- there is no place in
+ * its URL to name a different one. See spec/architecture/delivery.md.
+ */
+export const GITHUB_OWNER = 'canmi21';
+
 export const URLS = {
 	apps: {
 		development,
@@ -39,7 +49,7 @@ export const URLS = {
 	// licence routes, which have to state the terms of the code around the credits as well as
 	// the credits themselves -- so it is a published fact, not a convenience, and belongs
 	// beside the other URLs rather than written into a route.
-	source: 'https://github.com/canmi21/press',
+	source: `https://github.com/${GITHUB_OWNER}/press`,
 	// Domains owned here but not built here. `infra` is the apex that api and cdn hang off;
 	// `link` currently redirects to the site rather than serving content of its own.
 	internal: {

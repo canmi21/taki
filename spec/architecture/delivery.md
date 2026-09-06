@@ -68,3 +68,37 @@ hash: `IoskeleyMono-Regular-latin.woff2` is a stable name. Declaring it `immutab
 promises that the bytes at that name never change, so re-subsetting the font requires a new
 filename. CJK chunks already carry content hashes and need no such promise. Whatever replaces
 `_headers` has to preserve both cases rather than pretending all font names have one shape.
+
+## Release assets are proxied, for one account
+
+`/github/release/{repo}/{tag}/{asset}` serves a file attached to a GitHub release, fetched live
+from `github.com/{owner}/{repo}/releases/download/{tag}/{asset}` and held at the edge. `latest`
+as the tag takes GitHub's own alias for the newest non-prerelease. jsDelivr already serves a
+repository's files at a tag, a branch or a commit, so those are not proxied here; a release
+asset is the one thing it does not carry.
+
+**The account is not in the URL.** It is `GITHUB_OWNER` in `libs/urls`, and there is no segment
+in the CDN's path to name another, which is how "only my repositories" is enforced rather than
+checked. A repository the account does not have, a tag that was never cut and an asset that was
+never attached are all one answer from GitHub, 404, and the proxy says the same.
+
+**A moving tag is held for minutes; a version for an hour.** `nightly`, `weekly`, `monthly`,
+`stable`, `beta`, `dev`, `canary` and `latest`, in lowercase, name a release that is rewritten in
+place, so what their assets held an hour ago is a different file: a hit is kept five minutes and
+a miss one. Any other tag is read as a version, whose bytes will not change: an hour, and five
+minutes for a miss, which is the CDN's usual life for an error. The list is exact -- `Nightly`
+is a version as far as this is concerned -- because guessing at case would be guessing at
+intent.
+
+**A ranged download is answered from one upstream fetch.** The whole file is stored at the edge
+under its plain URL, and the cache answers a `Range` request out of it with a 206, so a client
+opening eight connections costs GitHub one transfer per colo rather than eight. A ranged request
+that misses is answered from upstream as asked, and the whole file is fetched once behind it so
+the connections that follow find it. Files past the edge cache's limit of 512 MB are passed
+through unstored, ranges and all.
+
+**The redirect is followed only onto GitHub.** The published address answers with a 302 to a
+signed object URL, and following it is the whole mechanism; following it anywhere would make
+this an open proxy the day that redirect changed, so the final host is checked. The headers that
+describe the file -- type, length, disposition, `ETag`, `Last-Modified` -- are carried through;
+the ones that described the upstream connection are not.
